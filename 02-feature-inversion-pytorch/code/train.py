@@ -63,9 +63,19 @@ class FeatureMatchLpLoss(nn.Module):
         def continuous_mult(x, y):
             return x*y
         size = reduce(continuous_mult, inputs.shape)
-        print(target.shape)
-        print(size)
         return torch.norm(torch.abs(inputs-target), p=self.p)/size
+
+
+def total_variation_loss(x, size_average=True):
+    b, c, h, w = x.shape
+    x_base = x[..., :h-1, :w-1]
+    x_right = x[..., 1:h, :w-1]
+    x_down = x[..., :h-1, 1:w]
+
+    loss = torch.norm(x_right-x_base, p=2) + torch.norm(x_down-x_base, p=2)
+    if size_average:
+        loss /= (b*c*h*w)
+    return loss
 
 
 def train(args):
@@ -118,13 +128,15 @@ def train(args):
             loss += criterion(noise_output, img_output)
 
         loss = criterion(img_output, noise_output)
+        tv_loss = total_variation_loss(noise_tensor)*args.weight_tv
+        loss += tv_loss
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         if epoch % args.show_interval == 0:
-            print("e:{}---loss:{:.5f}".format(epoch, loss.item()))
-            print("e:{}---loss:{:.5f}".format(epoch, loss.item()), file=log_file)
+            print("e:{}---loss:{:.5f}---tv_loss:{:.6f}".format(epoch, loss.item(), tv_loss.item()))
+            print("e:{}---loss:{:.5f}---tv_loss:{:.6f}".format(epoch, loss.item(), tv_loss.item()), file=log_file)
         if epoch % args.save_interval == 0:
             noise_np = noise_tensor.data.cpu().squeeze(
                 0).permute(1, 2, 0).contiguous().numpy()
@@ -141,7 +153,7 @@ if __name__ == "__main__":
     parser.add_argument('--img_shape', default=(224, 224))
     parser.add_argument('--lr', default=1e-2)
     parser.add_argument('--lr_milestones', default=[400, 800, 1700])
-    parser.add_argument('--weight_tv', default=0)
+    parser.add_argument('--weight_tv', default=0.1)
     parser.add_argument('--feature', default=['conv3_1'])
     parser.add_argument('--epoch', default=2000)
     parser.add_argument('--save_interval', default=10)

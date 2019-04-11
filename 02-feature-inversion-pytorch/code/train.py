@@ -79,9 +79,10 @@ def total_variation_loss(x, size_average=True):
 
 
 def train(args):
-    log_dir = os.path.join(args.output_dir, "M{}_L{}_W{}_F{}".format(
+    log_dir = os.path.join(args.output_dir, "M{}_L{}_WF{}_WTV{}_F{}".format(
         args.model,
         str(args.lr)+"-".join([str(x) for x in args.lr_milestones]),
+        args.weight_feature,
         args.weight_tv,
         "-".join(args.feature)
     ))
@@ -127,7 +128,7 @@ def train(args):
                 model, noise_tensor, item, transform_dict)
             loss += criterion(noise_output, img_output)
 
-        loss = criterion(img_output, noise_output)
+        loss = criterion(img_output, noise_output)*args.weight_feature
         tv_loss = total_variation_loss(noise_tensor)*args.weight_tv
         loss += tv_loss
         optimizer.zero_grad()
@@ -154,6 +155,7 @@ if __name__ == "__main__":
     parser.add_argument('--lr', default=1e-2)
     parser.add_argument('--lr_milestones', default=[400, 800, 1700])
     parser.add_argument('--weight_tv', default=0.1)
+    parser.add_argument('--weight_feature', default=2.0)
     parser.add_argument('--feature', default=['conv3_1'])
     parser.add_argument('--epoch', default=2000)
     parser.add_argument('--save_interval', default=10)

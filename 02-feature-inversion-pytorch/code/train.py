@@ -63,8 +63,6 @@ class FeatureMatchLpLoss(nn.Module):
         def continuous_mult(x, y):
             return x*y
         size = reduce(continuous_mult, inputs.shape)
-        print(target.shape)
-        print(size)
         return torch.norm(torch.abs(inputs-target), p=self.p)/size
 
 

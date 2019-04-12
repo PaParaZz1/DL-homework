@@ -72,7 +72,7 @@ def total_variation_loss(x, size_average=True):
     x_right = x[..., 1:h, :w-1]
     x_down = x[..., :h-1, 1:w]
 
-    loss = torch.norm(x_right-x_base, p=2) + torch.norm(x_down-x_base, p=2)
+    loss = ((x_right-x_base)**2).sum() + ((x_down-x_base)**2).sum()
     if size_average:
         loss /= (b*c*h*w)
     return loss
@@ -93,7 +93,10 @@ def train(args):
     transform_dict = None
     if args.model == 'vgg16_bn':
         model = vgg16_bn(pretrained=True)
-        transform_dict = {'conv3_1': ('features', '10')}
+        transform_dict = {'conv3_1': ('features', '11'),
+                          'conv1_1': ('features', '1'),
+                          'pool5': ('features', '30'),
+                          'fc6': ('classifier', '1')}
     elif args.model == 'resnet18':
         model = resnet18(pretrained=True)
     else:
@@ -120,15 +123,17 @@ def train(args):
 
     for epoch in range(args.epoch):
         scheduler.step()
-        loss = torch.Tensor().cuda()
+        loss = None
         for item in args.feature:
             img_output = extract_feature(
                 model, img_tensor, item, transform_dict)
             noise_output = extract_feature(
                 model, noise_tensor, item, transform_dict)
-            loss += criterion(noise_output, img_output)
+            if loss is None:
+                loss = criterion(noise_output, img_output)*args.weight_feature
+            else:
+                loss += criterion(noise_output, img_output)*args.weight_feature
 
-        loss = criterion(img_output, noise_output)*args.weight_feature
         tv_loss = total_variation_loss(noise_tensor)*args.weight_tv
         loss += tv_loss
         optimizer.zero_grad()
@@ -154,9 +159,9 @@ if __name__ == "__main__":
     parser.add_argument('--img_shape', default=(224, 224))
     parser.add_argument('--lr', default=1e-2)
     parser.add_argument('--lr_milestones', default=[400, 800, 1700])
-    parser.add_argument('--weight_tv', default=0.1)
-    parser.add_argument('--weight_feature', default=2.0)
-    parser.add_argument('--feature', default=['conv3_1'])
+    parser.add_argument('--weight_tv', default=0.01)
+    parser.add_argument('--weight_feature', default=1.0)
+    parser.add_argument('--feature', default=['conv3_1', 'fc6'])
     parser.add_argument('--epoch', default=2000)
     parser.add_argument('--save_interval', default=10)
     parser.add_argument('--show_interval', default=10)

@@ -125,6 +125,7 @@ def train(args):
     for epoch in range(args.epoch):
         scheduler.step()
         loss = None
+        loss_item = 0
         for item in args.feature:
             img_output = extract_feature(
                 model, img_tensor, item, transform_dict)
@@ -134,7 +135,9 @@ def train(args):
                 loss = criterion(noise_output, img_output)*args.weight_feature
             else:
                 loss += criterion(noise_output, img_output)*args.weight_feature
+            loss_item += 1
 
+        loss /= loss_item
         tv_loss = total_variation_loss(noise_tensor)*args.weight_tv
         loss += tv_loss
         optimizer.zero_grad()
@@ -155,14 +158,14 @@ def train(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--output_dir', default='../experiment/')
-    parser.add_argument('--model', default='resnet18')
+    parser.add_argument('--model', default='vgg16_bn')
     parser.add_argument('--img_path', default='../images/face.jpg')
     parser.add_argument('--img_shape', default=(224, 224))
     parser.add_argument('--lr', default=1e-2)
     parser.add_argument('--lr_milestones', default=[400, 800, 1700])
-    parser.add_argument('--weight_tv', default=0.05)
+    parser.add_argument('--weight_tv', default=0.01)
     parser.add_argument('--weight_feature', default=1.0)
-    parser.add_argument('--feature', default=['res2'])
+    parser.add_argument('--feature', default=['conv3_1', 'fc6'])
     parser.add_argument('--epoch', default=2000)
     parser.add_argument('--save_interval', default=10)
     parser.add_argument('--show_interval', default=10)

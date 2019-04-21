@@ -5,7 +5,6 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class AttackModel(nn.Module):
@@ -18,14 +17,14 @@ class AttackModel(nn.Module):
         self.epsilon = epsilon
 
     def forward(self, pre_noise, x):
-        noise = 10 * F.tanh(pre_noise)
+        noise = 10 * torch.tanh(pre_noise)
         x_noise = x + noise
         x_clip = x.clamp(0, 255)
-        round_term = (x_clip//1 - x_clip).requires_grad_(False)
+        round_term = (x_clip//1 - x_clip).detach()
         x_round = x_clip + round_term
         x_norm = (x_round - self.mean) / (self.std + self.epsilon)
-        x = self.model(x)
-        return x
+        x = self.model(x_norm)
+        return x, x_round
 
     def evaluate(self, x):
         x = (x - self.mean)/(self.std + self.epsilon)

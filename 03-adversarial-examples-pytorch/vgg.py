@@ -43,7 +43,7 @@ class Vgg16BnCifar(nn.Module):
         elif mode == 'AVG':
             return nn.AvgPool2d(kernel_size, stride, padding)
 
-    def _fc_layer(self, in_channels, out_channels, activation=None, dropout=0, use_bn=True):
+    def _fc_layer(self, in_channels, out_channels, activation=None, dropout=0, use_bn=False):
         layers = []
         layers.append(nn.Linear(in_channels, out_channels))
         if activation is not None:
@@ -118,7 +118,7 @@ class Vgg16BnCifar(nn.Module):
         x = self.conv53(x)
         x = self.mp5(x)
 
-        x = self.fc1(x.view(-1, 512))
+        x = x.view(-1, 512)
         x = self.dropout(x)
         x = self.fc1(x)
         x = self.fc2(x)

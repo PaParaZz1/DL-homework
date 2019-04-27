@@ -46,10 +46,21 @@ class MinusCrossEntropyLoss(nn.Module):
         return (-1) * self.criterion(pred, gt)
 
 
+class MinusCrossEntropyLossTv(MinusCrossEntropyLoss):
+    def __init__(self, weight_tv):
+        super(MinusCrossEntropyLossTv, self).__init__()
+        self.weight_tv = weight_tv
+
+    def forward(self, pred, gt):
+        loss = super.forward(pred, gt) + self.weight_tv*total_variation_loss(x)
+        return loss
+
+
 def train(args):
-    log_dir = os.path.join(args.output_dir, "T{}_L{}_E{}".format(
+    log_dir = os.path.join(args.output_dir, "T{}_L{}_TV{}_E{}".format(
         args.train_mode,
         args.loss_type,
+        args.weight_tv,
         args.epoch
     ))
     if not os.path.exists(log_dir):
@@ -85,7 +96,8 @@ def train(args):
 
     # criterion(loss)
     loss_dict = {'MinusCrossEntropy': MinusCrossEntropyLoss(),
-                 'CrossEntropy': nn.CrossEntropyLoss()}
+                 'CrossEntropy': nn.CrossEntropyLoss(),
+                 'MinusCrossEntropyLossTv': MinusCrossEntropyLossTv()}
     if args.train_mode == 'perturb':
         if args.loss_type in loss_dict:
             criterion = loss_dict[args.loss_type]
@@ -116,9 +128,12 @@ def train(args):
             raise NotImplementedError
 
         for epoch in range(args.epoch):
-            output, _ = model(pre_noise, img)
+            output, adv_example = model(pre_noise, img)
 
-            loss = criterion(output, train_label)
+            if args.loss_type = 'MinusCrossEntropyLoss':
+                loss = criterion(output, train_label)
+            elif args.loss_type = 'MinusCrossEntropyLossTv':
+                loss = criterion(adv_example, output, train_label)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -159,13 +174,14 @@ if __name__ == "__main__":
     parser.add_argument('--std', default=64.15)
     parser.add_argument('--num_classes', default=10)
     parser.add_argument('--batch_size', default=1)
-    parser.add_argument('--train_instance_number', default=10)
+    parser.add_argument('--train_instance_number', default=100)
     parser.add_argument('--num_workers', default=2)
     parser.add_argument('--lr', default=1e-2)
     parser.add_argument('--weight_decay', default=1e-10)
+    parser.add_argument('--weight_tv', default=0.01)
     parser.add_argument('--epoch', default=500)
     parser.add_argument('--train_mode', default='perturb', help='perturb mode or target mode')
-    parser.add_argument('--loss_type', default='MinusCrossEntropy')
+    parser.add_argument('--loss_type', default='MinusCrossEntropyTv')
     parser.add_argument('--save_interval', default=10)
     parser.add_argument('--show_interval', default=1)
     args = parser.parse_args()

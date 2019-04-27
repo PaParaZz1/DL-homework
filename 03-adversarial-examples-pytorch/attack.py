@@ -18,10 +18,6 @@ class AttackModel(nn.Module):
 
     def forward(self, pre_noise, x):
         noise = 10 * torch.tanh(pre_noise)
-        print('noise', noise.max())
-        print('noise mean', noise.mean())
-        print('img', x.mean())
-        print('img', x.max())
         x_noise = x + noise
         x_clip = x_noise.clamp(0, 255)
         round_term = (x_clip//1 - x_clip).detach()

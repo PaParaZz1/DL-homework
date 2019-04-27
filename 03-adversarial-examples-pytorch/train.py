@@ -133,8 +133,6 @@ def train(args):
                   'accuracy:{}'.format(accuracy.item()), file=log_file)
 
         _, adv_example = model(pre_noise, img)
-        print(img.mean())
-        print(adv_example.mean())
         output = model.evaluate(adv_example)
         accuracy = torch.eq(gt_label, output.argmax(dim=1)).float().item()
         success_rate = (idx*success_rate + 1 - accuracy) / (idx + 1)
@@ -161,7 +159,7 @@ if __name__ == "__main__":
     parser.add_argument('--std', default=64.15)
     parser.add_argument('--num_classes', default=10)
     parser.add_argument('--batch_size', default=1)
-    parser.add_argument('--train_instance_number', default=100)
+    parser.add_argument('--train_instance_number', default=10)
     parser.add_argument('--num_workers', default=2)
     parser.add_argument('--lr', default=1e-2)
     parser.add_argument('--weight_decay', default=1e-10)

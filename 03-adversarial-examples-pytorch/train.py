@@ -56,11 +56,28 @@ class MinusCrossEntropyLossTv(MinusCrossEntropyLoss):
         return loss
 
 
+class MinusCrossEntropyLossTvLp(MinusCrossEntropyLoss):
+    def __init__(self, weight_tv, weight_lp, p=2):
+        super(MinusCrossEntropyLossTvLp, self).__init__()
+        self.weight_tv = weight_tv
+        self.weight_lp = weight_lp
+        self.p = p
+
+    def forward(self, img, adv, pred, gt):
+        loss = super(MinusCrossEntropyLossTvLp, self).forward(pred, gt)
+        if self.weight_lp != 0:
+            loss += self.weight_lp * torch.norm(img-adv, p=self.p)
+        if self.weight_tv != 0:
+            loss += self.weight_tv * total_variation_loss(adv)
+        return loss
+
+
 def train(args):
-    log_dir = os.path.join(args.output_dir, "T{}_L{}_TV{}_E{}".format(
+    log_dir = os.path.join(args.output_dir, "T{}_L{}_TV{}_LP{}_E{}".format(
         args.train_mode,
         args.loss_type,
         args.weight_tv,
+        args.weight_lp,
         args.epoch
     ))
     if not os.path.exists(log_dir):
@@ -97,7 +114,8 @@ def train(args):
     # criterion(loss)
     loss_dict = {'MinusCrossEntropy': MinusCrossEntropyLoss(),
                  'CrossEntropy': nn.CrossEntropyLoss(),
-                 'MinusCrossEntropyTv': MinusCrossEntropyLossTv(args.weight_tv)}
+                 'MinusCrossEntropyTv': MinusCrossEntropyLossTv(args.weight_tv),
+                 'MinusCrossEntropyTvLp': MinusCrossEntropyLossTvLp(args.weight_tv, args.weight_lp)}
     if args.train_mode == 'perturb':
         if args.loss_type in loss_dict:
             criterion = loss_dict[args.loss_type]
@@ -134,6 +152,8 @@ def train(args):
                 loss = criterion(output, train_label)
             elif args.loss_type == 'MinusCrossEntropyTv':
                 loss = criterion(adv_example, output, train_label)
+            elif args.loss_type == 'MinusCrossEntropyTvLp':
+                loss = criterion(img, adv_example, output, train_label)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -178,10 +198,11 @@ if __name__ == "__main__":
     parser.add_argument('--num_workers', default=2)
     parser.add_argument('--lr', default=1e-2)
     parser.add_argument('--weight_decay', default=1e-10)
-    parser.add_argument('--weight_tv', default=0.05)
+    parser.add_argument('--weight_tv', default=0)
+    parser.add_argument('--weight_lp', default=0.1)
     parser.add_argument('--epoch', default=500)
     parser.add_argument('--train_mode', default='perturb', help='perturb mode or target mode')
-    parser.add_argument('--loss_type', default='MinusCrossEntropyTv')
+    parser.add_argument('--loss_type', default='MinusCrossEntropyTvLp')
     parser.add_argument('--save_interval', default=10)
     parser.add_argument('--show_interval', default=1)
     args = parser.parse_args()

@@ -51,8 +51,8 @@ class MinusCrossEntropyLossTv(MinusCrossEntropyLoss):
         super(MinusCrossEntropyLossTv, self).__init__()
         self.weight_tv = weight_tv
 
-    def forward(self, pred, gt):
-        loss = super.forward(pred, gt) + self.weight_tv*total_variation_loss(x)
+    def forward(self, x, pred, gt):
+        loss = super(MinusCrossEntropyLossTv, self).forward(pred, gt) + self.weight_tv*total_variation_loss(x)
         return loss
 
 
@@ -80,7 +80,7 @@ def train(args):
         raise ValueError("invalid model:{}".format(args.model))
     model = AttackModel(model, args.mean, args.std)
     model.cuda()
-    model.train()
+    model.eval()
     if args.load_path is not None:
         state_dict = torch.load(args.load_path)
         new_state_dict = OrderedDict()
@@ -97,7 +97,7 @@ def train(args):
     # criterion(loss)
     loss_dict = {'MinusCrossEntropy': MinusCrossEntropyLoss(),
                  'CrossEntropy': nn.CrossEntropyLoss(),
-                 'MinusCrossEntropyLossTv': MinusCrossEntropyLossTv()}
+                 'MinusCrossEntropyTv': MinusCrossEntropyLossTv(args.weight_tv)}
     if args.train_mode == 'perturb':
         if args.loss_type in loss_dict:
             criterion = loss_dict[args.loss_type]
@@ -130,9 +130,9 @@ def train(args):
         for epoch in range(args.epoch):
             output, adv_example = model(pre_noise, img)
 
-            if args.loss_type = 'MinusCrossEntropyLoss':
+            if args.loss_type == 'MinusCrossEntropy':
                 loss = criterion(output, train_label)
-            elif args.loss_type = 'MinusCrossEntropyLossTv':
+            elif args.loss_type == 'MinusCrossEntropyTv':
                 loss = criterion(adv_example, output, train_label)
             optimizer.zero_grad()
             loss.backward()
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_workers', default=2)
     parser.add_argument('--lr', default=1e-2)
     parser.add_argument('--weight_decay', default=1e-10)
-    parser.add_argument('--weight_tv', default=0.01)
+    parser.add_argument('--weight_tv', default=0.05)
     parser.add_argument('--epoch', default=500)
     parser.add_argument('--train_mode', default='perturb', help='perturb mode or target mode')
     parser.add_argument('--loss_type', default='MinusCrossEntropyTv')

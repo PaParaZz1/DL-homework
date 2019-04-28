@@ -57,14 +57,19 @@ class MinusCrossEntropyLossTv(MinusCrossEntropyLoss):
 
 
 class MinusCrossEntropyLossTvLp(MinusCrossEntropyLoss):
-    def __init__(self, weight_tv, weight_lp, p=2):
+    def __init__(self, weight_tv, weight_lp, p=2, is_minus=True):
         super(MinusCrossEntropyLossTvLp, self).__init__()
         self.weight_tv = weight_tv
         self.weight_lp = weight_lp
         self.p = p
+        self.is_minus = is_minus
 
     def forward(self, img, adv, pred, gt):
-        loss = super(MinusCrossEntropyLossTvLp, self).forward(pred, gt)
+        if self.is_minus:
+            loss = super(MinusCrossEntropyLossTvLp, self).forward(pred, gt)
+        else:
+            criterion = nn.CrossEntropyLoss()
+            loss = criterion(pred, gt)
         if self.weight_lp != 0:
             loss += self.weight_lp * torch.norm(img-adv, p=self.p)
         if self.weight_tv != 0:
@@ -73,12 +78,13 @@ class MinusCrossEntropyLossTvLp(MinusCrossEntropyLoss):
 
 
 def train(args):
-    log_dir = os.path.join(args.output_dir, "T{}_L{}_TV{}_LP{}_E{}".format(
+    log_dir = os.path.join(args.output_dir, "T{}_L{}_TV{}_LP{}_E{}_M{}".format(
         args.train_mode,
         args.loss_type,
         args.weight_tv,
         args.weight_lp,
-        args.epoch
+        args.epoch,
+        args.load_path
     ))
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
@@ -122,7 +128,10 @@ def train(args):
         else:
             raise NotImplementedError
     elif args.train_mode == 'target':
-        raise NotImplementedError
+        if args.loss_type in loss_dict:
+            criterion = loss_dict[args.loss_type]
+        else:
+            raise NotImplementedError
     else:
         raise ValueError('invalid train_mode:{}'.format(args.train_mode))
 
@@ -143,7 +152,7 @@ def train(args):
         if args.train_mode == 'perturb':
             train_label = gt_label
         elif args.train_mode == 'target':
-            raise NotImplementedError
+            train_label = (gt_label + 1) % args.num_classes
 
         for epoch in range(args.epoch):
             output, adv_example = model(pre_noise, img)

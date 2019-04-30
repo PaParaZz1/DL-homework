@@ -121,7 +121,8 @@ def train(args):
     loss_dict = {'MinusCrossEntropy': MinusCrossEntropyLoss(),
                  'CrossEntropy': nn.CrossEntropyLoss(),
                  'MinusCrossEntropyTv': MinusCrossEntropyLossTv(args.weight_tv),
-                 'MinusCrossEntropyTvLp': MinusCrossEntropyLossTvLp(args.weight_tv, args.weight_lp)}
+                 'MinusCrossEntropyTvLp': MinusCrossEntropyLossTvLp(args.weight_tv, args.weight_lp),
+                 'CrossEntropyTvLp': MinusCrossEntropyLossTvLp(args.weight_tv, args.weight_lp, is_minus=False)}
     if args.train_mode == 'perturb':
         if args.loss_type in loss_dict:
             criterion = loss_dict[args.loss_type]
@@ -143,6 +144,7 @@ def train(args):
     optimizer = Adam([pre_noise], lr=args.lr, weight_decay=args.weight_decay)
 
     success_rate = 0.
+    target_success_rate = 0.
     noise_l2 = 0.
     for idx, data in enumerate(train_loader):
         img, gt_label = data
@@ -161,7 +163,7 @@ def train(args):
                 loss = criterion(output, train_label)
             elif args.loss_type == 'MinusCrossEntropyTv':
                 loss = criterion(adv_example, output, train_label)
-            elif args.loss_type == 'MinusCrossEntropyTvLp':
+            elif args.loss_type == 'MinusCrossEntropyTvLp' or 'CrossEntropyTvLp':
                 loss = criterion(img, adv_example, output, train_label)
             optimizer.zero_grad()
             loss.backward()
@@ -178,10 +180,10 @@ def train(args):
 
         _, adv_example = model(pre_noise, img)
         output = model.evaluate(adv_example)
-        target_accuracy = torch.eq(train_label, output.argmax(dim=1)).float()
+        target_accuracy = torch.eq(train_label, output.argmax(dim=1)).float().item()
         accuracy = torch.eq(gt_label, output.argmax(dim=1)).float().item()
         success_rate = (idx*success_rate + 1 - accuracy) / (idx + 1)
-        target_success_rate = (idx*target_success_rate + 1 - target_accuracy) / (idx + 1)
+        target_success_rate = (idx*target_success_rate + target_accuracy) / (idx + 1)
         noise_l2 = (idx*noise_l2 + torch.norm(img-adv_example, p=2).item()) / (idx + 1)
 
         if idx >= args.train_instance_number:
@@ -209,11 +211,11 @@ if __name__ == "__main__":
     parser.add_argument('--num_workers', default=2)
     parser.add_argument('--lr', default=1e-2)
     parser.add_argument('--weight_decay', default=1e-10)
-    parser.add_argument('--weight_tv', default=0)
-    parser.add_argument('--weight_lp', default=0.1)
+    parser.add_argument('--weight_tv', default=0.01)
+    parser.add_argument('--weight_lp', default=0)
     parser.add_argument('--epoch', default=500)
-    parser.add_argument('--train_mode', default='perturb', help='perturb mode or target mode')
-    parser.add_argument('--loss_type', default='MinusCrossEntropyTvLp')
+    parser.add_argument('--train_mode', default='target', help='perturb mode or target mode')
+    parser.add_argument('--loss_type', default='CrossEntropyTvLp')
     parser.add_argument('--save_interval', default=10)
     parser.add_argument('--show_interval', default=1)
     args = parser.parse_args()

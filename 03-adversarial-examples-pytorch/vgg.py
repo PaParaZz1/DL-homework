@@ -95,7 +95,7 @@ class Vgg16BnCifar(nn.Module):
         self.mp5 = self._pool_layer(kernel_size=2, stride=2, mode='MAX')
 
         self.dropout = nn.Dropout(p=0.5)
-        self.fc1 = self._fc_layer(512, 512, activation=nn.ReLU(), dropout=0.5)
+        self.fc1 = self._fc_layer(512, 512, activation=nn.ReLU(), dropout=0.5, use_bn=True)
         self.fc2 = self._fc_layer(512, self.num_classes)
 
     def forward(self, x):

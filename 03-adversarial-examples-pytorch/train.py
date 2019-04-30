@@ -178,8 +178,10 @@ def train(args):
 
         _, adv_example = model(pre_noise, img)
         output = model.evaluate(adv_example)
+        target_accuracy = torch.eq(train_label, output.argmax(dim=1)).float()
         accuracy = torch.eq(gt_label, output.argmax(dim=1)).float().item()
         success_rate = (idx*success_rate + 1 - accuracy) / (idx + 1)
+        target_success_rate = (idx*target_success_rate + 1 - target_accuracy) / (idx + 1)
         noise_l2 = (idx*noise_l2 + torch.norm(img-adv_example, p=2).item()) / (idx + 1)
 
         if idx >= args.train_instance_number:
@@ -187,8 +189,8 @@ def train(args):
             print('enough train instance, end train procedure...', file=log_file)
             break
 
-    print('final success_rate:{}, noise_l2:{}'.format(success_rate, noise_l2))
-    print('final success_rate:{}, noise_l2:{}'.format(success_rate, noise_l2), file=log_file)
+    print('final success_rate:{}, noise_l2:{}, target_success_rate:{}'.format(success_rate, noise_l2, target_success_rate))
+    print('final success_rate:{}, noise_l2:{}, target_success_rate:{}'.format(success_rate, noise_l2, target_success_rate), file=log_file)
     log_file.close()
 
 

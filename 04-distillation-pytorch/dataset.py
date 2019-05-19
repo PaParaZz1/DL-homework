@@ -18,7 +18,7 @@ from torchvision import transforms
 
 
 class SvhnDataset(Dataset):
-    def __init__(self, root, train, transform=None, use_extra_data=True):
+    def __init__(self, root, train, transform=None, use_extra_data=False):
         self.root = root
         if train:
             self.data = [os.path.join(root, 'train_32x32.mat')]

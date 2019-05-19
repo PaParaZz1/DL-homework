@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import numbers
 
+
 def round_bits(x, num_bits):
     assert(isinstance(x, torch.Tensor))
     assert(isinstance(num_bits, numbers.Integral))
@@ -33,7 +34,7 @@ def proc(x, multiplier, num_bits):
 
 class QuantConv2d(nn.Module):
     def __init__(self, name, in_channels, out_channels, kernel_size, stride=1, padding=0,
-                out_f_num_bits=None, w_num_bits=None, is_train=False, proc_multiplier=0.1):
+                 out_f_num_bits=None, w_num_bits=None, is_train=False, proc_multiplier=0.1):
         super(QuantConv2d, self).__init__()
         self.name = name
         self.stride = stride
@@ -46,7 +47,8 @@ class QuantConv2d(nn.Module):
 
         if isinstance(kernel_size, numbers.Integral):
             kernel_size = (kernel_size, kernel_size)
-        self.weight = torch.zeros(out_channels, in_channels, *kernel_size).float()
+        self.weight = torch.zeros(
+            out_channels, in_channels, *kernel_size).float()
         self.weight_init_(self.weight)
         self.bias = torch.zeros(out_channels)
         self.weight = nn.Parameter(self.weight)
@@ -54,7 +56,6 @@ class QuantConv2d(nn.Module):
         self.bn = nn.BatchNorm2d(out_channels, affine=False)
         self.affine_k = nn.Parameter(torch.ones(out_channels, 1, 1))
         self.affine_b = nn.Parameter(torch.zeros(out_channels, 1, 1))
-
 
     def weight_init_(self, x, scale_factor=1.0, mode='FAN_IN'):
         mode_list = ['FAN_IN', 'FAN_OUT']
@@ -70,7 +71,8 @@ class QuantConv2d(nn.Module):
 
     def forward(self, x):
         self.weight = quantize_weight(self.weight, num_bits=self.w_num_bits)
-        x = F.conv2d(x, self.weight, self.bias, stride=self.stride, padding=self.padding)
+        x = F.conv2d(x, self.weight, self.bias,
+                     stride=self.stride, padding=self.padding)
         x = self.bn(x)
         x = (torch.abs(self.affine_k)+1.0) * x + self.affine_b
         if self.out_f_num_bits != 0:
@@ -79,7 +81,8 @@ class QuantConv2d(nn.Module):
 
 
 def test_quantize_conv2d():
-    layer = QuantConv2d("quant_test", 3, 16, 3, 1, 0, out_f_num_bits=1, w_num_bits=2)
+    layer = QuantConv2d("quant_test", 3, 16, 3, 1, 0,
+                        out_f_num_bits=1, w_num_bits=2)
     inputs = torch.randn(4, 3, 32, 32).clamp(-1, 1)
     inputs = round_bits(inputs, 1)
     output = layer(inputs)

@@ -72,19 +72,26 @@ class Model(nn.Module):
     def build(self):
         w = self.w_num_bits
         out_f = self.out_f_num_bits
-        self.conv1 = self._conv_layer("conv1", self.in_channels, 16, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
+        self.conv1 = self._conv_layer("conv1", self.in_channels, 16, 3, 1,
+                                      1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
         self.mp1 = self._pool_layer(kernel_size=2, stride=2, mode='MAX')
 
-        self.conv21 = self._conv_layer("conv21", 16, 32, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
-        self.conv22 = self._conv_layer("conv22", 32, 32, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
+        self.conv21 = self._conv_layer(
+            "conv21", 16, 32, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
+        self.conv22 = self._conv_layer(
+            "conv22", 32, 32, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
         self.mp2 = self._pool_layer(kernel_size=2, stride=2, mode='MAX')
 
-        self.conv31 = self._conv_layer("conv31", 32, 64, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
-        self.conv32 = self._conv_layer("conv32", 64, 64, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
+        self.conv31 = self._conv_layer(
+            "conv31", 32, 64, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
+        self.conv32 = self._conv_layer(
+            "conv32", 64, 64, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
         self.mp3 = self._pool_layer(kernel_size=2, stride=2, mode='MAX')
 
-        self.conv41 = self._conv_layer("conv41", 64, 128, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
-        self.conv42 = self._conv_layer("conv42", 128, 128, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
+        self.conv41 = self._conv_layer(
+            "conv41", 64, 128, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
+        self.conv42 = self._conv_layer(
+            "conv42", 128, 128, 3, 1, 1, w_num_bits=w, out_f_num_bits=out_f, is_train=self.is_train)
         self.ap4 = self._pool_layer(kernel_size=4, stride=4, mode='AVG')
 
         self.fc1 = self._fc_layer(128, self.num_classes, dropout=0)

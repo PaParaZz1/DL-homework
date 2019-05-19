@@ -37,7 +37,7 @@ class SoftCrossEntropy(nn.Module):
 
 
 class CrossEntropyLoss(nn.Module):
-    mode_list = ['normal', 'teacher']
+    mode_list = ['normal', 'teacher', 'hard_soft_teacher']
 
     def __init__(self, num_classes=10, mode='normal', temperature=1):
         super(CrossEntropyLoss, self).__init__()
@@ -53,6 +53,9 @@ class CrossEntropyLoss(nn.Module):
             return self.criterion_hard(logits, gt_label)
         elif self.mode == 'teacher':
             return self.criterion_soft(logits, teacher_output)
+        elif self.mode == 'hard_soft_teacher':
+            factor = self.temperature**2
+            return self.criterion_hard(logits, gt_label) + factor*self.criterion_soft(logits, teacher_output)
 
 
 def train(teacher_model, network_model, train_loader, test_loader, optimizer, scheduler, criterion, args):
@@ -165,6 +168,8 @@ def main(args):
         criterion = CrossEntropyLoss(mode='normal')
     elif args.loss == 'CrossEntropyTeacher':
         criterion = CrossEntropyLoss(mode='teacher')
+    elif args.loss == 'CrossEntropyHardSoftTeacher':
+        criterion = CrossEntropyLoss(mode='hard_soft_teacher')
     else:
         raise ValueError
 
@@ -207,7 +212,7 @@ if __name__ == "__main__":
     parser.add_argument('--log_model_dir', default='./train_log')
     parser.add_argument('--batch_size', default=256)
     parser.add_argument('--num_workers', default=2)
-    parser.add_argument('--loss', default='CrossEntropyTeacher')
+    parser.add_argument('--loss', default='CrossEntropyHardSoftTeacher')
     parser.add_argument('--weight_num_bits', default=2)
     parser.add_argument('--output_f_num_bits', default=1)
     parser.add_argument('--temperature', default=15.0)

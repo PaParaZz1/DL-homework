@@ -2,6 +2,27 @@ import torch
 import torch.nn as nn
 
 
+class EarthMoveDistanceLayer(nn.Module):
+    def __init__(self, size_average=True):
+        super(EarthMoveDistanceLayer, self).__init__()
+        self.size_average = size_average
+
+    def forward(self, data):
+        generated_feature, target_feature = data
+        assert(generated_feature.shape == target_feature.shape)
+        B, C, H, W = generated_feature.shape
+        generated = generated_feature.view(B, -1)
+        target = target_feature.view(B, -1)
+        generated = torch.sort(generated, dim=1)[0]
+        target = torch.sort(target, dim=1)[0]
+        loss = ((generated - target)**2).sum(dim=1)
+        if self.size_average:
+            loss = loss.mean(dim=0)
+        else:
+            loss = loss.sum(dim=0)
+        return loss
+
+
 class GramMatrix(nn.Module):
     def __init__(self, size_average=True):
         super(GramMatrix, self).__init__()
@@ -38,11 +59,15 @@ class GramLossLayer(nn.Module):
 
 
 class GramLoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
+    dist_type_dict = {'gram': GramLossLayer, 'earth_move': EarthMoveDistanceLayer}
+
+    def __init__(self, weight=None, dist_type=None, size_average=True):
         super(GramLoss, self).__init__()
         assert(weight is not None)
+        assert(dist_type in self.dist_type_dict.keys())
         self.weight = weight
-        self.handle_layer = GramLossLayer(size_average=size_average)
+        self.handle_layer = self.dist_type_dict[dist_type](size_average=size_average)
+
 
     def forward(self, feature_list):
         assert(len(self.weight) == len(feature_list))

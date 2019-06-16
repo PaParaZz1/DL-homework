@@ -56,10 +56,11 @@ def extract_feature(model, inputs, layer_list):
 
 
 def train(args):
-    log_dir = os.path.join(args.output_dir, "L{}_W{}".format(
+    log_dir = os.path.join(args.output_dir, "L{}_W{}_LOSS{}".format(
         '_'.join([item[1] for item in args.layer_list]),
-        '_'.join([str(item) for item in args.weight_layer])
-    ))
+        '_'.join([str(item) for item in args.weight_layer]),
+        args.loss_type)
+    )
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
     log_file = open(os.path.join(log_dir, "log.txt"), "w")
@@ -78,7 +79,7 @@ def train(args):
         2, 0, 1).contiguous().unsqueeze(0).cuda()
     noise_tensor.requires_grad_(True)
 
-    criterion = GramLoss(args.weight_layer)
+    criterion = GramLoss(args.weight_layer, dist_type=args.loss_type)
 
     def lr_func(epoch):
         lr_factor = args.lr_factor_dict
@@ -121,6 +122,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_dir', default='experiment/')
     parser.add_argument('--img_path', default='images/red-peppers256.jpg')
     parser.add_argument('--img_shape', default=(224, 224))
+    parser.add_argument('--loss_type', default='earth_move')
     parser.add_argument('--lr', default=1e-2)
     parser.add_argument('--lr_factor_dict', default={0: 1, 200: 0.5, 1500: 0.1})
     parser.add_argument('--weight_layer', default=[1.0 for x in range(13)])
